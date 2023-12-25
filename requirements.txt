@@ -1,0 +1,13 @@
+#To be formatted with specific versions
+
+#installed already
+-e git+https://github.com/openai/CLIP.git
+ftfy
+regex
+tqdm
+torch
+torchvision
+
+pandas
+matplotlib==3.7.3
+
