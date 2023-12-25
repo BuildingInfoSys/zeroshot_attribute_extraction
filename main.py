@@ -3,39 +3,50 @@ import clip
 import glob
 import os
 import torch
-from models.clip_predict import text_prompt_by_task, predict
+from clip_predict import text_prompt_by_task, predict, pred_idx_to_labels
+from grounded_sam_predict import build_seg_models, predict_seg
 
 def get_valid_images(paths):
-    return [p for p in paths if p.split('.') in ["jpg", "png", "jpeg"]]
+    return [p for p in paths if p.split('.')[-1] in ["jpg", "png", "jpeg"]]
+
+def process_img_paths(data_path):
+    if(data_path[:-3] not in ["jpg", "png", "jpeg"]):
+        img_paths = glob.glob(os.path.join(data_path, "*")) #data folder is providee
+    else:
+        img_paths = [data_path] #single image(path to target img is provided)
+    img_paths = get_valid_images(img_paths)
+    return img_paths
 
 
 def main(args):
-    #TODO: write body of some functions
+    if(not os.path.exists(args.data_dir)):
+        raise Exception(f'data directory not found for {args.data_dir}')
+    if(not os.path.exists(args.output_path)):
+        os.makedirs(os.path.exists(args.output_path))
+    
+    img_paths = process_img_paths(args.data_dir)
     if(args.task == "segmentation"):
-        #model = build_sam()
-        model = None
+        grounding_dino_model, sam_predictor = build_seg_models()
+        predict_seg(img_paths[:10], args.output_path, grounding_dino_model, sam_predictor)
+
     elif(args.task in ["nFloors", "roofType", "yearBuilt"]):
-        
-        #model = load_clip()
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model, preprocess = clip.load("ViT-B/32", device=device)
         model.to(torch.float32)
-        if(not os.path.exists(args.data_dir)):
-            raise Exception(f'directory not found for {args.data_dir}')
-        img_paths = glob.glob(os.path.join(args.data_dir, "*"))
-        img_paths = get_valid_images(img_paths)
+        #import ipdb;ipdb.set_trace()
 
-        TEXT_PROMPT, PROMPT_TEMPLATE, NUM_CLASSES = text_prompt_by_task(args.task)
+        TEXT_PROMPT, PROMPT_TEMPLATE, GT_LABELS = text_prompt_by_task(args.task)
         text_input = torch.cat([clip.tokenize(PROMPT_TEMPLATE.format(c)) for c in TEXT_PROMPT]).to(device)
-        prediction_df = predict(model, text_input, img_paths, preprocess, device, agg = "max", num_classes = NUM_CLASSES)
-
+        prediction_df = predict(model, text_input, img_paths, preprocess, device, agg = "max", num_classes = len(GT_LABELS))
+        prediction_df = pred_idx_to_labels(gt_labels = ['gable', 'hip', 'flat'], prediction_df = prediction_df)
+        prediction_df.to_csv(os.path.join(args.output_path, f'{args.task}_pred.csv'), index=False)
     else:
         raise Exception("task mode not supported, available tasks: segmentation, nFloors, roofType, yearBuilt")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Zero-shot repository for building attribute extraction")
-    parser.add_argument("--data_dir", default="/nfs/turbo/coe-stellayu/brianwang/testData/nFloors/merged_data/Ann Arbor, MI",
+    parser.add_argument("--data_dir", default="/nfs/turbo/coe-stellayu/brianwang/testData/nFloors/merged_data/Houston, TX",
         help="path to image folder",type=str)
     #parser.add_argument('--csv_label_path')
     #parser.add_argument('--model', default = "brails")
