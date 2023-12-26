@@ -1,8 +1,9 @@
 import argparse
-import clip
 import glob
 import os
+from config import cfg
 import torch
+import clip
 from clip_predict import text_prompt_by_task, predict, pred_idx_to_labels
 from grounded_sam_predict import build_seg_models, predict_seg
 
@@ -21,13 +22,11 @@ def process_img_paths(data_path):
 def main(args):
     if(not os.path.exists(args.data_dir)):
         raise Exception(f'data directory not found for {args.data_dir}')
-    if(not os.path.exists(args.output_path)):
-        os.makedirs(os.path.exists(args.output_path))
     
     img_paths = process_img_paths(args.data_dir)
     if(args.task == "segmentation"):
         grounding_dino_model, sam_predictor = build_seg_models()
-        predict_seg(img_paths[:10], args.output_path, grounding_dino_model, sam_predictor)
+        predict_seg(img_paths, args.output_path, grounding_dino_model, sam_predictor)
 
     elif(args.task in ["nFloors", "roofType", "yearBuilt"]):
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -52,6 +51,19 @@ if __name__ == "__main__":
     #parser.add_argument('--model', default = "brails")
     parser.add_argument("--task")
     parser.add_argument("--visualize_results", default = False, help = "visualize best and worse cases?")
-    parser.add_argument("--output_path", default = None, help = "Optional output path when writing result to a new csv file")
+    parser.add_argument("--output_path", help = "Output path when writing result to a new csv file")
+    parser.add_argument(
+        "--cfg",
+        default="config/config.yaml",
+        metavar="FILE",
+        help="path to config file",
+        type=str,
+    )
     args = parser.parse_args()
-    main(args)
+    cfg.merge_from_file(args.cfg)
+    if(not os.path.exists(args.output_path)):
+        os.makedirs(os.path.exists(args.output_path))
+    with open(os.path.join(cfg.DIR.output_dir, 'config.yaml'), 'w') as f:
+        f.write("{}".format(cfg))
+
+    main(cfg)

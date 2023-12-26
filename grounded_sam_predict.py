@@ -13,19 +13,19 @@ from tqdm import tqdm
 from groundingdino.util.inference import Model
 from segment_anything import sam_model_registry, SamPredictor
 
-#build GroundingDINO and SAM
+'''
+
+Set Up segmentation models: GroundedSAM (GroundingDINO and SAM)
+'''
 def build_seg_models():
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'DEVICE FOUND: {DEVICE}')
     # GroundingDINO config and checkpoint
     GROUNDING_DINO_CONFIG_PATH = "GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
-    #GROUNDING_DINO_CHECKPOINT_PATH = "./groundingdino_swint_ogc.pth"
-    GROUNDING_DINO_CHECKPOINT_PATH = "/nfs/turbo/coe-stellayu/brianwang/GroundedSAM/groundingdino_swint_ogc.pth"
-
+    GROUNDING_DINO_CHECKPOINT_PATH = "./groundingdino_swint_ogc.pth"
     # Segment-Anything checkpoint
     SAM_ENCODER_VERSION = "vit_h"
-    #SAM_CHECKPOINT_PATH = "./sam_vit_h_4b8939.pth"
-    SAM_CHECKPOINT_PATH = "/nfs/turbo/coe-stellayu/brianwang/GroundedSAM/sam_vit_h_4b8939.pth"
+    SAM_CHECKPOINT_PATH = "./sam_vit_h_4b8939.pth"
 
     # Building GroundingDINO inference model
     grounding_dino_model = Model(model_config_path=GROUNDING_DINO_CONFIG_PATH, model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH)
@@ -35,7 +35,12 @@ def build_seg_models():
     sam_predictor = SamPredictor(sam)
     return grounding_dino_model, sam_predictor
 
-# Prompting SAM with detected boxes
+'''
+Prompting SAM with detected boxes (provided from GroundingDINO)
+Input: 
+- image: raw image
+- xyxy: bounding box coordinates of detected objects (from GroundingDINO)
+'''
 def segment(sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray) -> np.ndarray:
     sam_predictor.set_image(image)
     result_masks = []
@@ -48,7 +53,13 @@ def segment(sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray) ->
         result_masks.append(masks[index])
     return np.array(result_masks)
 
-
+'''
+Performs segmentation on an image
+Given that SAM only allows point or box annotations as prompts(text prompts was not enabled), 
+GroundedSAM incorporates GroundingDINO with SAM -> (1) GroundingDINO accepts an image and text prompt, detected targets and outputs bounding boxes
+(2) GroundedSAM accepts those bounding boxes as input and returns the segmentation maps
+Function Result: saves segmented image, stores related data on segmented/detected results(detected boxes, class labels, segmented mask)
+'''
 def run_on_one_image(img_path, output_dir, grounding_dino_model, sam_predictor, CLASSES, BOX_THRESHOLD, TEXT_THRESHOLD, NMS_THRESHOLD):
     SOURCE_IMAGE_PATH = img_path
     img_name = SOURCE_IMAGE_PATH.split("/")[-1][:-4]
@@ -109,12 +120,12 @@ def run_on_one_image(img_path, output_dir, grounding_dino_model, sam_predictor, 
     cv2.imwrite(os.path.join(output_dir, f"{img_name}_mask.png"), mask)
     annotated_image = mask_annotator.annotate(scene=image.copy(), detections=detections)
     cv2.imwrite(os.path.join(output_dir, f"{img_name}_mask_overlap.png"), annotated_image)
-    # annotated_image = box_annotator.annotate(scene=annotated_image, detections=detections, labels=labels)
-    # cv2.imwrite(os.path.join(output_dir, f"{img_name}.png"), annotated_image)
     output_dict = {"confidence":detections.confidence[nms_idx], "class":detections.class_id[nms_idx], "mask":detections.mask}
     return output_dict
 
-
+'''
+Main function of processing given images to be segmented
+'''
 def predict_seg(
     img_sources, output_dir, grounding_dino_model, sam_predictor, CLASSES=["door", "window", "roof", "facade"], 
     BOX_THRESHOLD=0.25, TEXT_THRESHOLD=0.25, NMS_THRESHOLD=0.8):
