@@ -1,7 +1,8 @@
 # Zero-shot Building Attribute Extraction from Large-Scale Vision and Language Models (WACV 2024)
 (attach figure)
 Fei Pan, Sangryul Jeon, Brian Wang, Frank Mckenna, Stella X. Yu
-![main_diag](https://raw.githubusercontent.com/BuildingInfoSys/zeroshot_attribute_extraction/main/assets/main_diagram.png)
+
+![main_diag](https://raw.githubusercontent.com/BuildingInfoSys/zeroshot_attribute_extraction/blob/main/assets/main_diagram.png)
 ## Abstract 
 Modern building recognition methods, exemplified by the BRAILS framework, utilize supervised learning to extract information from satellite and street-view images for im- age classification and semantic segmentation tasks. How- ever, each task module requires human-annotated data, hin- dering the scalability and robustness to regional variations and annotation imbalances. In response, we propose a new zero-shot workflow for building attribute extraction that uti- lizes large-scale vision and language models to mitigate reliance on external annotations. The proposed workflow contains two key components: image-level captioning and segment-level captioning for the building images based on the vocabularies pertinent to structural and civil engineer- ing. These two components generate descriptive captions by computing feature representations of the image and the vocabularies, and facilitating a semantic match between the visual and textual representations. Consequently, our framework offers a promising avenue to enhance AI-driven captioning for building attribute extraction in the structural and civil engineering domains, ultimately reducing reliance on human annotations while bolstering performance and adaptability.
 
