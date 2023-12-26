@@ -29,6 +29,7 @@ def build_seg_models():
 
     # Building GroundingDINO inference model
     grounding_dino_model = Model(model_config_path=GROUNDING_DINO_CONFIG_PATH, model_checkpoint_path=GROUNDING_DINO_CHECKPOINT_PATH)
+    grounding_dino_model.to(device)
     # Building SAM Model and SAM Predictor
     sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH)
     sam.to(device=DEVICE)

@@ -3,8 +3,8 @@
 Fei Pan, Sangryul Jeon, Brian Wang, Frank Mckenna, Stella X. Yu
 
 ![main_diag](assets/main_diagram.png)
-<img src="assets/diagram2.png" width="400">
-<img src="assets/detailed_diag.png" width="400">
+<img src="assets/diagram2.png" width="350">
+<img src="assets/detailed_diag.png" width="350">
 
 ## Abstract 
 Modern building recognition methods, exemplified by the BRAILS framework, utilize supervised learning to extract information from satellite and street-view images for im- age classification and semantic segmentation tasks. How- ever, each task module requires human-annotated data, hin- dering the scalability and robustness to regional variations and annotation imbalances. In response, we propose a new zero-shot workflow for building attribute extraction that uti- lizes large-scale vision and language models to mitigate reliance on external annotations. The proposed workflow contains two key components: image-level captioning and segment-level captioning for the building images based on the vocabularies pertinent to structural and civil engineer- ing. These two components generate descriptive captions by computing feature representations of the image and the vocabularies, and facilitating a semantic match between the visual and textual representations. Consequently, our framework offers a promising avenue to enhance AI-driven captioning for building attribute extraction in the structural and civil engineering domains, ultimately reducing reliance on human annotations while bolstering performance and adaptability.
@@ -35,7 +35,7 @@ Note that this step is crucial to successfully setup model-dependent packages wi
 conda create --y --name zeroshot_extraction python=3.8.0
 conda activate zeroshot_extraction
 conda install --y -c pytorch pytorch=1.10.0 torchvision cudatoolkit=11.0
-pip install ftfy regex tqdm pandas matplotlib==3.7.3
+pip install ftfy regex tqdm pandas PyYAML yacs matplotlib==3.7.3
 
 git clone https://github.com/BuildingInfoSys/zeroshot_attribute_extraction.git
 pip install git+https://github.com/openai/CLIP.git
@@ -44,7 +44,7 @@ python -m pip install -e GroundingDINO
 ```
 Note that python version has to be >=3.8.0, and pytorch(>=1.10.0) has to be compatible with CUDA device to successfully compile.
 
-**Step3: Download Model's Pretrained Weights**
+**Step3: Download Pretrained Weights**
 ```
 wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth
@@ -52,24 +52,28 @@ wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alp
 
 
 ## Usage
-## Running This Repository
+### Running This Repository
 Below is the general command to run this repo:
 ```
-python3 main.py --task TARGET_TASK --output_path YOUR_OUTPUT_PATH --data_dir DATA_PATH_TO_EVALUATED_IMAGES
+python3 main.py
 ```
 
-To extract different attributes, simply set the task argument to your selected attribute.
+To extract different attributes or tune the inference setting, navigate to config/config.yaml and change the variables accordingly
 
-#### Description of Arguments
+### Description of Arguments
 - data_dir: path to target image(s)
     - Single-Image Inference: set data_dir argument to be the absolute path to the target image
     - Multi-Images Inference: Set data_dir argument to be the absolute path to the directory containing target images. 
-- task: task to be evaluated. Current supported modes are segmentation, nFloors, roofType, and yearBuilt. 
+- Task name: task to be evaluated. Current supported modes are segmentation, nFloors, roofType, and yearBuilt. 
     - **Task = "segmentation"**: segments out roof, fences, windows, doors, and facade.
     - **Task = "nFloors"**: predicts the number of stories of a given house. The default text prompts are limited to predicting one-story, two-story, and three-story houses
     - **Task = "roofType"** predicts the roof type of a given house. The default text prompts are limited to predicting flat/gable/hip roof shape
     - **Task = "yearBuilt"** predicts the year the given house is constructed. The default text prompts predicts "Pre-1970','1970-1979','1980-1989','1990-1999','2000-2009','Post-2010"
 -  output_path: the output path that stores the prediction(in csv file) of given images from your data directory.
+
+
+### Adding Custom Prompts
+To enable custom prompts, (1) set INFER's enable_custom_prompts to True. (2) Then, update the customized variables in TASK category accordingly. For segmentation task, update the custom_seg_prompts variable with the list of segmented targets. For classification task, update config/class_prompts.json with each pair of groundtruth label and associated prompts.
 
 ## Examples
 TODO: (1) For each task, show some successful examples and sample code

@@ -1,0 +1,12 @@
+TASK:
+    name: "nFloors"
+    custom_seg_prompts: None
+    custom_prompt_temp: None
+    custom_class_prompts_path: "./config/class_prompts.json"
+
+DIR:
+    data_dir: "/nfs/turbo/coe-stellayu/brianwang/testData/nFloors/merged_data/Houston, TX"
+    output_dir: "/nfs/turbo/coe-stellayu/brianwang/results/wacv_test"
+
+INFER:
+    enable_custom_prompts: True #enable to true if you want to use your own prompts(update prompts in TASK as well)

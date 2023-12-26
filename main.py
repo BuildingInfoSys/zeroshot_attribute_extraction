@@ -1,57 +1,45 @@
 import argparse
-import glob
 import os
+import shutil
 from config import cfg
 import torch
+
 import clip
-from clip_predict import text_prompt_by_task, predict, pred_idx_to_labels
+from clip_predict import predict, pred_idx_to_labels
 from grounded_sam_predict import build_seg_models, predict_seg
+from utils import get_valid_images, process_img_paths, text_prompt_by_task, retrieve_custom_prompts
 
-def get_valid_images(paths):
-    return [p for p in paths if p.split('.')[-1] in ["jpg", "png", "jpeg"]]
-
-def process_img_paths(data_path):
-    if(data_path[:-3] not in ["jpg", "png", "jpeg"]):
-        img_paths = glob.glob(os.path.join(data_path, "*")) #data folder is providee
-    else:
-        img_paths = [data_path] #single image(path to target img is provided)
-    img_paths = get_valid_images(img_paths)
-    return img_paths
-
-
-def main(args):
-    if(not os.path.exists(args.data_dir)):
-        raise Exception(f'data directory not found for {args.data_dir}')
+def main(cfg):
+    if(not os.path.exists(cfg.DIR.data_dir)):
+        raise Exception(f'data directory not found for {cfg.DIR.data_dir}')
     
-    img_paths = process_img_paths(args.data_dir)
-    if(args.task == "segmentation"):
+    img_paths = process_img_paths(cfg.DIR.data_dir)
+    if(cfg.TASK.name == "segmentation"):
         grounding_dino_model, sam_predictor = build_seg_models()
-        predict_seg(img_paths, args.output_path, grounding_dino_model, sam_predictor)
+        if(cfg.TASK.custom_seg_prompts!=None):
+            predict_seg(img_paths, cfg.DIR.output_dir, grounding_dino_model, sam_predictor, CLASSES = cfg.TASK.custom_seg_prompts)
+        else:
+            predict_seg(img_paths, cfg.DIR.output_dir, grounding_dino_model, sam_predictor)
 
-    elif(args.task in ["nFloors", "roofType", "yearBuilt"]):
+    elif(cfg.TASK.name in ["nFloors", "roofType", "yearBuilt"]):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model, preprocess = clip.load("ViT-B/32", device=device)
         model.to(torch.float32)
         #import ipdb;ipdb.set_trace()
-
-        TEXT_PROMPT, PROMPT_TEMPLATE, GT_LABELS = text_prompt_by_task(args.task)
+        if(cfg.INFER.enable_custom_prompts):
+            TEXT_PROMPT, PROMPT_TEMPLATE, GT_LABELS = retrieve_custom_prompts(cfg)
+        else:
+            TEXT_PROMPT, PROMPT_TEMPLATE, GT_LABELS = text_prompt_by_task(cfg.TASK.name)
         text_input = torch.cat([clip.tokenize(PROMPT_TEMPLATE.format(c)) for c in TEXT_PROMPT]).to(device)
         prediction_df = predict(model, text_input, img_paths, preprocess, device, agg = "max", num_classes = len(GT_LABELS))
-        prediction_df = pred_idx_to_labels(gt_labels = ['gable', 'hip', 'flat'], prediction_df = prediction_df)
-        prediction_df.to_csv(os.path.join(args.output_path, f'{args.task}_pred.csv'), index=False)
+        prediction_df = pred_idx_to_labels(gt_labels = GT_LABELS, prediction_df = prediction_df)
+        prediction_df.to_csv(os.path.join(cfg.DIR.output_dir, f'{cfg.TASK.name}_pred.csv'), index=False)
     else:
         raise Exception("task mode not supported, available tasks: segmentation, nFloors, roofType, yearBuilt")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Zero-shot repository for building attribute extraction")
-    parser.add_argument("--data_dir", default="/nfs/turbo/coe-stellayu/brianwang/testData/nFloors/merged_data/Houston, TX",
-        help="path to image folder",type=str)
-    #parser.add_argument('--csv_label_path')
-    #parser.add_argument('--model', default = "brails")
-    parser.add_argument("--task")
-    parser.add_argument("--visualize_results", default = False, help = "visualize best and worse cases?")
-    parser.add_argument("--output_path", help = "Output path when writing result to a new csv file")
     parser.add_argument(
         "--cfg",
         default="config/config.yaml",
@@ -61,9 +49,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     cfg.merge_from_file(args.cfg)
-    if(not os.path.exists(args.output_path)):
-        os.makedirs(os.path.exists(args.output_path))
+    if(not os.path.exists(cfg.DIR.output_dir)):
+        os.makedirs(os.path.exists(cfg.DIR.output_dir))
     with open(os.path.join(cfg.DIR.output_dir, 'config.yaml'), 'w') as f:
         f.write("{}".format(cfg))
+    if(cfg.INFER.enable_custom_prompts):
+        prompt_fname = cfg.TASK.custom_class_prompts_path.split("/")[-1]
+        shutil.copyfile(cfg.TASK.custom_class_prompts_path, os.path.join(cfg.DIR.output_dir, prompt_fname))
+    
 
     main(cfg)

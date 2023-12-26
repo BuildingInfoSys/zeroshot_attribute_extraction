@@ -5,33 +5,6 @@ import pandas as pd
 from tqdm import tqdm
 
 '''
-Helper function that returns default text prompts and prefix/suffix for target task
-'''
-def text_prompt_by_task(task):
-    PROMPT_TEMPLATE_BY_TASK = {
-        "nFloors":" a photo of a {}",
-        "roofType": "{} roof shape",
-        "yearBuilt": "built in {}"
-    }
-    DEFAULT_TEXT_PROMPTS_BY_TASK = {
-        "nFloors":[
-            'one story house','bungalow','flat house', #one-story prompts
-            'two story house','two-story duplex','raised ranch', #two-story prompts
-            'three story house','three story house','three-decker'
-            #'one story house','one story house', 'one story house', 'two story house','two story house', 'two story house', 'three story house','three story house','three story house'
-        ],
-        "roofType":['gable', 'hip', 'flat'],
-        "yearBuilt":['Pre-1970','1970-1979','1980-1989','1990-1999','2000-2009','Post-2010']
-    }
-    #required when providing multi-prompts per class 
-    GT_LABELS_BY_TASK = {
-        "nFloors":[1,2,3], 
-        "roofType":['gable', 'hip', 'flat'],
-         "yearBuilt":['Pre-1970','1970-1979','1980-1989','1990-1999','2000-2009','Post-2010']
-    }
-    return DEFAULT_TEXT_PROMPTS_BY_TASK[task], PROMPT_TEMPLATE_BY_TASK[task], GT_LABELS_BY_TASK[task]
-
-'''
 Batch Data Preprocessing of models
 '''
 def preprocess_batch_img(batch_idx, batch_size, img_paths, aug, device):
@@ -99,10 +72,11 @@ agg = max: predictions = [0.2, 0.35]
 agg = mean: predictions = [0.15, 0.1833]
 '''
 def aggregate_predictions(similarity, agg_method, gap):
+    batch_num = similarity.shape[0]
     if(agg_method == "max"):
-        sim_per_class = torch.max(similarity.reshape(-1, 3, gap), dim = -1).values.cpu() # n x total_options -> n x 3 x options_per_class -> n x 3 (take the max probabiltiy among text prompts for each class)
+        sim_per_class = torch.max(similarity.reshape(batch_num, -1, gap), dim = -1).values.cpu() # n x total_options -> n x 3 x options_per_class -> n x 3 (take the max probabiltiy among text prompts for each class)
     elif(agg_method == "mean"):
-        sim_per_class = torch.mean(similarity.reshape(-1, 3, gap), dim = -1).cpu() # n x total_options -> n x 3 x options_per_class -> n x 3 (take the mean probability among text prompts for each class)
+        sim_per_class = torch.mean(similarity.reshape(batch_num, -1, gap), dim = -1).cpu() # n x total_options -> n x 3 x options_per_class -> n x 3 (take the mean probability among text prompts for each class)
     else:
         raise Exception("unsupported aggregated method among text options")
     predictions = torch.argmax(sim_per_class, dim = -1).numpy() # n x 3 -> n
