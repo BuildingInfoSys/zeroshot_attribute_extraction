@@ -81,11 +81,12 @@ Please refer to [GroundedSAM](https://github.com/IDEA-Research/Grounded-Segment-
 
 ## Citing Our Paper(TODO)
 ```
-@InProceedings{TODO,
-  title = {Zero-shot Building Attribute Extraction from Large-Scale Vision and Language Models},
-  author = {Pan, Fei and Jeon, Sangryul and Wang, Brian and Mckenna, Frank and Yu, Stella},
-  booktitle = {IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
-  year = {2024}
+@inproceedings{pan2024zero,
+  title={Zero-shot Building Attribute Extraction from Large-Scale Vision and Language Models},
+  author={Pan, Fei and Jeon, Sangryul and Wang, Brian and Mckenna, Frank and Yu, Stella X},
+  booktitle={Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision},
+  pages={8647--8656},
+  year={2024}
 }
 ```
 
